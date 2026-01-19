@@ -2,10 +2,13 @@ const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const app = express();
-const db = new sqlite3.Database('./database.db');
+const dbPath = process.env.RENDER_DISK_MOUNT_PATH 
+    ? `${process.env.RENDER_DISK_MOUNT_PATH}/database.db` 
+    : './database.db';
 
+const db = new sqlite3.Database(dbPath);
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // สร้าง Table ตาม Schema ที่กำหนด
 db.serialize(() => {
@@ -26,6 +29,10 @@ app.get('/api/loans', (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
     });
+});
+
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // เพิ่มรายการใหม่
