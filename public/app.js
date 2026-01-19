@@ -1,49 +1,61 @@
+// --- สรุป Logic: ดอกเบี้ยไม่ทบต้น ---
+// 1. ยอดกู้เพิ่ม/ลด จะไปคำนวณใน principal_balance (เงินต้น)
+// 2. การคิดดอกเบี้ย จะคำนวณจาก principal_balance ล่าสุดเท่านั้น
+// 3. รายการ 'ดอกเบี้ย' จะไม่ทำให้ principal_balance เพิ่มขึ้น
+
 let transactions = [];
-let interestRate = 5; // ต่อเดือน
+let settings = {};
 let chartInstance = null;
 
-// Initial Load
-document.addEventListener('DOMContentLoaded', fetchData);
+document.addEventListener('DOMContentLoaded', initApp);
 
+async function initApp() {
+    await loadSettings();
+    await fetchData();
+    setupEventListeners();
+}
+
+// 1. จัดการการตั้งค่า
+async function loadSettings() {
+    try {
+        const response = await fetch('/api/settings');
+        settings = await response.json();
+        
+        // อัปเดต UI เบื้องต้น
+        document.getElementById('borrower-name').innerText = settings.borrowerName || 'ไม่ระบุชื่อ';
+        document.getElementById('setting-borrower-name').value = settings.borrowerName || '';
+        document.getElementById('setting-interest-rate').value = settings.interestRate || 5;
+        document.getElementById('setting-start-date').value = settings.startDate || '';
+        
+        // เช็ค Dark Mode จาก Settings
+        const isDark = settings.theme !== 'light';
+        document.getElementById('darkModeToggle').checked = isDark;
+        applyTheme(isDark);
+    } catch (e) { console.error("Load settings error:", e); }
+}
+
+async function saveSettings() {
+    const data = {
+        borrowerName: document.getElementById('setting-borrower-name').value,
+        interestRate: document.getElementById('setting-interest-rate').value,
+        startDate: document.getElementById('setting-start-date').value
+    };
+
+    for (const [key, value] of Object.entries(data)) {
+        await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key, value })
+        });
+    }
+    location.reload(); // รีโหลดเพื่ออัปเดตค่าทั้งหมด
+}
+
+// 2. จัดการข้อมูลธุรกรรม
 async function fetchData() {
     const response = await fetch('/api/loans');
     transactions = await response.json();
     updateUI();
-}
-
-function updateUI() {
-    const tbody = document.getElementById('transaction-body');
-    tbody.innerHTML = '';
-    
-    let bal = 0, interest = 0, payment = 0;
-    
-    transactions.forEach(t => {
-        if (t.type === 'เพิ่ม') bal += t.amount;
-        if (t.type === 'ลด') { bal -= t.amount; payment += t.amount; }
-        if (t.type === 'ดอกเบี้ย') { bal += t.amount; interest += t.amount; }
-
-        tbody.innerHTML += `
-            <tr class="border-b hover:bg-gray-50">
-                <td class="p-4">${t.date}</td>
-                <td class="p-4"><span class="px-2 py-1 rounded-full text-xs ${getTypeClass(t.type)}">${t.type}</span></td>
-                <td class="p-4 ${t.type === 'ลด' ? 'text-green-600' : 'text-red-600'}">${t.amount.toLocaleString()}</td>
-                <td class="p-4 font-semibold">${t.balance.toLocaleString()}</td>
-                <td class="p-4 text-gray-500">${t.notes || '-'}</td>
-            </tr>
-        `;
-    });
-
-    document.getElementById('total-balance').innerText = `${bal.toLocaleString()} บาท`;
-    document.getElementById('total-interest').innerText = `${interest.toLocaleString()} บาท`;
-    document.getElementById('total-payment').innerText = `${payment.toLocaleString()} บาท`;
-    
-    updateChart();
-}
-
-function getTypeClass(type) {
-    if (type === 'เพิ่ม') return 'bg-red-100 text-red-600';
-    if (type === 'ลด') return 'bg-green-100 text-green-600';
-    return 'bg-orange-100 text-orange-600';
 }
 
 async function saveTransaction(type) {
@@ -53,17 +65,23 @@ async function saveTransaction(type) {
 
     if (!amount || !date) return alert('กรุณากรอกข้อมูลให้ครบ');
 
-    // คำนวณ Balance ล่าสุด
-    const lastBalance = transactions.length > 0 ? transactions[0].balance : 0;
-    const newBalance = (type === 'ลด') ? lastBalance - amount : lastBalance + amount;
+    const lastPrincipal = transactions.length > 0 ? transactions[0].principal_balance : 0;
+    const lastTotalBalance = transactions.length > 0 ? transactions[0].balance : 0;
+
+    // คำนวณเงินต้นใหม่ (Simple Interest: ดอกเบี้ยจะไม่มาบวกใน principal_balance)
+    let newPrincipal = lastPrincipal;
+    if (type === 'เพิ่ม') newPrincipal += amount;
+    if (type === 'ลด') newPrincipal -= amount;
 
     const payload = {
         date,
         type,
         amount,
-        balance: newBalance,
-        interest: 0,
-        notes
+        balance: (type === 'เพิ่ม') ? lastTotalBalance + amount : lastTotalBalance - amount,
+        principal_balance: newPrincipal,
+        interest_accrued: 0,
+        notes,
+        interest_rate: settings.interestRate
     };
 
     await fetch('/api/loans', {
@@ -72,75 +90,157 @@ async function saveTransaction(type) {
         body: JSON.stringify(payload)
     });
 
-    closeModal();
+    closeModal('loan-modal');
     fetchData();
 }
 
-// ระบบคำนวณดอกเบี้ย (คิด 5% จากยอดคงเหลือปัจจุบัน)
-async function calculateMonthlyInterest() {
-    if (transactions.length === 0) return alert('ยังไม่มีข้อมูลการกู้');
-    const lastBalance = transactions[0].balance;
-    const interestCharge = (lastBalance * interestRate) / 100;
-    
-    if (confirm(`ระบบจะคิดดอกเบี้ย ${interestRate}% จากยอด ${lastBalance.toLocaleString()} เป็นเงิน ${interestCharge.toLocaleString()} บาท?`)) {
+// 3. ระบบคำนวณดอกเบี้ย (ไม่ทบต้น)
+async function calculateSimpleInterest() {
+    const lastPrincipal = transactions.length > 0 ? transactions[0].principal_balance : 0;
+    if (lastPrincipal <= 0) return alert('ไม่มียอดเงินต้นคงเหลือสำหรับคำนวณดอกเบี้ย');
+
+    const rate = parseFloat(settings.interestRate);
+    const interestAmount = (lastPrincipal * rate) / 100;
+
+    if (confirm(`คิดดอกเบี้ย ${rate}% จากเงินต้น ${lastPrincipal.toLocaleString()} บาท\nรวมเป็นดอกเบี้ย: ${interestAmount.toLocaleString()} บาท (ไม่ทบเงินต้น)`)) {
+        const payload = {
+            date: new Date().toISOString().split('T')[0],
+            type: 'ดอกเบี้ย',
+            amount: interestAmount,
+            balance: (transactions.length > 0 ? transactions[0].balance : 0) + interestAmount,
+            principal_balance: lastPrincipal, // สำคัญ: เงินต้นคงเท่าเดิม ไม่เพิ่มขึ้น
+            interest_accrued: interestAmount,
+            notes: `ดอกเบี้ยประจำเดือน (${rate}%)`,
+            interest_rate: rate
+        };
+
         await fetch('/api/loans', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                date: new Date().toISOString().split('T')[0],
-                type: 'ดอกเบี้ย',
-                amount: interestCharge,
-                balance: lastBalance + interestCharge,
-                interest: interestCharge,
-                notes: `ดอกเบี้ยประจำเดือน (${interestRate}%)`
-            })
+            body: JSON.stringify(payload)
         });
         fetchData();
     }
 }
 
-// ฟังก์ชันสำหรับกราฟ Chart.js
+// 4. ส่วนแสดงผล UI
+function updateUI() {
+    const tbody = document.getElementById('transaction-body');
+    tbody.innerHTML = '';
+    
+    let totalInt = 0;
+    let totalRepaid = 0;
+    let totalLoaned = 0;
+
+    transactions.forEach(t => {
+        if (t.type === 'ดอกเบี้ย') totalInt += t.amount;
+        if (t.type === 'ลด') totalRepaid += t.amount;
+        if (t.type === 'เพิ่ม') totalLoaned += t.amount;
+
+        tbody.innerHTML += `
+            <tr class="border-b border-gray-800 light:border-gray-200 hover:bg-cyan-500/5 transition">
+                <td class="p-4 font-mono text-sm">${t.date}</td>
+                <td class="p-4"><span class="px-2 py-0.5 rounded text-xs font-bold uppercase ${getTypeClass(t.type)}">${t.type}</span></td>
+                <td class="p-4 text-right font-mono ${t.type === 'ลด' ? 'text-green-400' : 'text-cyan-400'}">${t.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                <td class="p-4 text-right font-mono text-gray-400">${t.principal_balance.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                <td class="p-4 text-right font-mono text-purple-400">${t.interest_accrued > 0 ? t.interest_accrued.toLocaleString() : '-'}</td>
+                <td class="p-4 text-xs text-gray-500">${t.notes || ''}</td>
+            </tr>
+        `;
+    });
+
+    const currentPrincipal = transactions.length > 0 ? transactions[0].principal_balance : 0;
+    
+    document.getElementById('current-principal').innerText = currentPrincipal.toLocaleString(undefined, {minimumFractionDigits: 2});
+    document.getElementById('total-loaned').innerText = totalLoaned.toLocaleString() + ' บาท';
+    document.getElementById('total-interest-accrued').innerText = totalInt.toLocaleString() + ' บาท';
+    document.getElementById('total-repaid').innerText = totalRepaid.toLocaleString() + ' บาท';
+    
+    updateChart();
+}
+
+// 5. Utilities
+function getTypeClass(type) {
+    if (type === 'เพิ่ม') return 'bg-cyan-900/50 text-cyan-400 border border-cyan-500';
+    if (type === 'ลด') return 'bg-green-900/50 text-green-400 border border-green-500';
+    return 'bg-purple-900/50 text-purple-400 border border-purple-500';
+}
+
+function applyTheme(isDark) {
+    if (isDark) document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+}
+
+function setupEventListeners() {
+    document.getElementById('darkModeToggle').addEventListener('change', (e) => {
+        applyTheme(e.target.checked);
+        fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: 'theme', value: e.target.checked ? 'dark' : 'light' })
+        });
+    });
+}
+
+function openModal(id) {
+    document.getElementById(id).classList.remove('hidden');
+    if (id === 'loan-modal') {
+        document.getElementById('form-date').valueAsDate = new Date();
+        document.getElementById('modal-loan-title').innerText = event.target.innerText;
+    }
+}
+
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
 function updateChart() {
     const ctx = document.getElementById('loanChart').getContext('2d');
-    const last6Months = transactions.slice(0, 10).reverse();
+    const chartData = [...transactions].reverse().slice(-10);
     
     if (chartInstance) chartInstance.destroy();
+    
+    const isDark = document.documentElement.classList.contains('dark');
+    const accentColor = isDark ? '#00e6e6' : '#2563eb';
 
     chartInstance = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: last6Months.map(t => t.date),
+            labels: chartData.map(t => t.date),
             datasets: [{
-                label: 'ยอดหนี้คงเหลือ',
-                data: last6Months.map(t => t.balance),
-                borderColor: '#2563eb',
-                tension: 0.4,
+                data: chartData.map(t => t.principal_balance),
+                borderColor: accentColor,
+                backgroundColor: isDark ? 'rgba(0, 230, 230, 0.1)' : 'rgba(37, 99, 235, 0.1)',
                 fill: true,
-                backgroundColor: 'rgba(37, 99, 235, 0.1)'
+                tension: 0.4,
+                borderWidth: 2,
+                pointRadius: 4
             }]
         },
-        options: { responsive: true, plugins: { legend: { display: false } } }
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { grid: { color: isDark ? '#1f2937' : '#e5e7eb' }, ticks: { color: '#888' } },
+                x: { grid: { display: false }, ticks: { color: '#888' } }
+            }
+        }
     });
 }
 
-// Modal Control
-function openModal(mode) {
-    const modal = document.getElementById('modal-backdrop');
-    const title = document.getElementById('modal-title');
-    const btn = document.getElementById('save-btn');
-    
-    modal.classList.remove('hidden');
-    document.getElementById('form-date').valueAsDate = new Date();
-
-    if (mode === 'add') {
-        title.innerText = 'เพิ่มยอดกู้';
-        btn.onclick = () => saveTransaction('เพิ่ม');
-    } else if (mode === 'sub') {
-        title.innerText = 'ลดยอดกู้ / ชำระคืน';
-        btn.onclick = () => saveTransaction('ลด');
-    }
+function exportData() {
+    let csv = "วันที่,ประเภท,จำนวนเงิน,เงินต้นคงเหลือ,ดอกเบี้ยรายการนี้,หมายเหตุ\n";
+    transactions.forEach(t => {
+        csv += `${t.date},${t.type},${t.amount},${t.principal_balance},${t.interest_accrued},${t.notes}\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `loan_report_${settings.borrowerName || 'export'}.csv`;
+    link.click();
 }
 
-function closeModal() {
-    document.getElementById('modal-backdrop').classList.add('hidden');
+async function confirmReset() {
+    if (confirm('ยืนยันการลบข้อมูลทั้งหมด?')) {
+        await fetch('/api/reset', { method: 'DELETE' });
+        location.reload();
+    }
 }

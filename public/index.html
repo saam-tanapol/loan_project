@@ -1,58 +1,141 @@
 <!DOCTYPE html>
-<html lang="th">
-<head>
+<html lang="th" class="dark"> <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบจัดการเงินกู้ (SPA)</title>
+    <title>⚡ Loan Manager ⚡</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
-    <style>body { font-family: 'Kanit', sans-serif; }</style>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;600&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Chakra Petch', sans-serif;
+            background-color: #0d0d1a; /* Deep dark blue */
+            color: #00e6e6; /* Neon cyan for default text */
+        }
+        .dark body {
+            background-color: #0d0d1a;
+            color: #00e6e6;
+        }
+        .light body {
+            background-color: #f0f8ff; /* Light blue-ish white */
+            color: #333333;
+        }
+        .card {
+            background-color: #1a1a3a; /* Darker blue for cards */
+            border: 1px solid #00e6e6; /* Neon border */
+            box-shadow: 0 0 10px rgba(0, 230, 230, 0.3); /* Neon glow */
+        }
+        .light .card {
+            background-color: #ffffff;
+            border: 1px solid #888888;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary {
+            background-color: #00e6e6; /* Neon cyan */
+            color: #0d0d1a; /* Dark text on neon */
+            box-shadow: 0 0 5px rgba(0, 230, 230, 0.5);
+        }
+        .light .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+            box-shadow: none;
+        }
+        .btn-secondary {
+            background-color: #333355; /* Dark button */
+            color: #00e6e6;
+            border: 1px solid #00e6e6;
+        }
+        .light .btn-secondary {
+            background-color: #cccccc;
+            color: #333333;
+            border: 1px solid #999999;
+        }
+        input, select, textarea {
+            background-color: #0d0d1a; /* Dark input background */
+            border: 1px solid #00e6e6;
+            color: #00e6e6;
+        }
+        .light input, .light select, .light textarea {
+            background-color: #ffffff;
+            border: 1px solid #cccccc;
+            color: #333333;
+        }
+        .neon-text-primary {
+            color: #00e6e6;
+            text-shadow: 0 0 5px rgba(0, 230, 230, 0.7);
+        }
+        .neon-text-secondary {
+            color: #ff00ff; /* Neon magenta */
+            text-shadow: 0 0 5px rgba(255, 0, 255, 0.7);
+        }
+    </style>
 </head>
-<body class="bg-gray-50 text-gray-800">
+<body class="bg-gray-900 text-cyan-400">
 
     <div class="max-w-6xl mx-auto p-4 lg:p-8">
         <header class="flex justify-between items-center mb-8">
-            <h1 class="text-3xl font-bold text-blue-600">จัดการเงินกู้</h1>
-            <button onclick="openModal('settings')" class="bg-gray-200 p-2 rounded-full hover:bg-gray-300">⚙️ ตั้งค่า</button>
+            <h1 class="text-4xl font-bold neon-text-primary font-orbitron">LOAN.APP // v1.0</h1>
+            <div class="flex items-center space-x-4">
+                <span class="text-sm font-light text-gray-500 light:text-gray-700">โหมด:</span>
+                <label for="darkModeToggle" class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="darkModeToggle" class="sr-only peer" checked> <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-cyan-500"></div>
+                    <span class="ml-3 text-sm font-medium text-cyan-400 light:text-gray-700">🌙/☀️</span>
+                </label>
+                <button onclick="openModal('settings')" class="p-2 rounded-full hover:bg-gray-800 text-cyan-400 light:text-gray-700 light:hover:bg-gray-200 transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                </button>
+            </div>
         </header>
 
+        <div class="card p-6 rounded-2xl mb-8 flex items-center justify-between">
+            <div>
+                <p class="text-xl text-gray-400 light:text-gray-600">ชื่อผู้กู้:</p>
+                <h2 id="borrower-name" class="text-3xl font-bold neon-text-primary uppercase mt-1">N/A</h2>
+            </div>
+            <div class="text-right">
+                <p class="text-xl text-gray-400 light:text-gray-600">เงินต้นคงเหลือปัจจุบัน:</p>
+                <h2 id="current-principal" class="text-4xl font-bold neon-text-primary mt-1">0.00 <span class="text-2xl">บาท</span></h2>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-blue-500">
-                <p class="text-sm text-gray-500">เงินต้นคงเหลือ</p>
-                <h2 id="total-balance" class="text-2xl font-bold">0.00 บาท</h2>
+            <div class="card p-6 rounded-2xl">
+                <p class="text-sm text-gray-400 light:text-gray-600">ยอดกู้ทั้งหมด</p>
+                <h2 id="total-loaned" class="text-2xl font-bold text-teal-300">0.00 บาท</h2>
             </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-red-500">
-                <p class="text-sm text-gray-500">ดอกเบี้ยสะสม</p>
-                <h2 id="total-interest" class="text-2xl font-bold text-red-500">0.00 บาท</h2>
+            <div class="card p-6 rounded-2xl">
+                <p class="text-sm text-gray-400 light:text-gray-600">ดอกเบี้ยสะสม</p>
+                <h2 id="total-interest-accrued" class="text-2xl font-bold text-purple-300">0.00 บาท</h2>
             </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-green-500">
-                <p class="text-sm text-gray-500">ชำระคืนแล้ว</p>
-                <h2 id="total-payment" class="text-2xl font-bold text-green-600">0.00 บาท</h2>
+            <div class="card p-6 rounded-2xl">
+                <p class="text-sm text-gray-400 light:text-gray-600">ยอดชำระคืน</p>
+                <h2 id="total-repaid" class="text-2xl font-bold text-green-400">0.00 บาท</h2>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-            <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm">
+            <div class="lg:col-span-2 card p-6 rounded-2xl">
+                <h3 class="text-xl font-semibold mb-4 neon-text-primary">ยอดเงินต้นคงเหลือ 6 เดือนล่าสุด</h3>
                 <canvas id="loanChart" height="150"></canvas>
             </div>
             <div class="flex flex-col gap-4">
-                <button onclick="openModal('add')" class="w-full py-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition">➕ เพิ่มยอดกู้</button>
-                <button onclick="openModal('sub')" class="w-full py-4 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition">➖ ลดยอดกู้ / ชำระ</button>
-                <button onclick="calculateMonthlyInterest()" class="w-full py-4 bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 transition">⏳ คำนวณดอกเบี้ย (รายเดือน)</button>
+                <button onclick="openModal('add')" class="w-full py-4 rounded-xl font-semibold btn-primary hover:opacity-90 transition">➕ เพิ่มยอดกู้</button>
+                <button onclick="openModal('sub')" class="w-full py-4 rounded-xl font-semibold btn-primary hover:opacity-90 transition">➖ ลดยอดกู้ / ชำระ</button>
+                <button onclick="calculateSimpleInterest()" class="w-full py-4 rounded-xl font-semibold btn-secondary hover:bg-gray-700 transition">⏳ คำนวณดอกเบี้ย (รายเดือน)</button>
             </div>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <div class="p-6 border-b"><h3 class="text-xl font-semibold">ประวัติรายการ</h3></div>
+        <div class="card rounded-2xl overflow-hidden">
+            <div class="p-6 border-b border-gray-700 light:border-gray-200"><h3 class="text-xl font-semibold neon-text-primary">ประวัติรายการ</h3></div>
             <div class="overflow-x-auto">
-                <table class="w-full text-left">
-                    <thead class="bg-gray-50 border-b">
+                <table class="w-full text-left text-cyan-400 light:text-gray-700">
+                    <thead class="bg-gray-800 border-b border-gray-700 light:bg-gray-100 light:border-gray-200">
                         <tr>
                             <th class="p-4">วันที่</th>
                             <th class="p-4">ประเภท</th>
-                            <th class="p-4">การเปลี่ยนแปลง</th>
-                            <th class="p-4">ยอดคงเหลือ</th>
+                            <th class="p-4 text-right">จำนวนเงิน</th>
+                            <th class="p-4 text-right">เงินต้นคงเหลือ</th>
+                            <th class="p-4 text-right">ดอกเบี้ย (รายการนี้)</th>
                             <th class="p-4">หมายเหตุ</th>
                         </tr>
                     </thead>
@@ -63,17 +146,49 @@
         </div>
     </div>
 
-    <div id="modal-backdrop" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
-            <h2 id="modal-title" class="text-2xl font-bold mb-4"></h2>
+    <div id="loan-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden flex items-center justify-center p-4 z-50">
+        <div class="card p-8 max-w-md w-full rounded-2xl relative">
+            <button onclick="closeModal('loan-modal')" class="absolute top-4 right-4 text-gray-500 hover:text-cyan-400">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <h2 id="modal-loan-title" class="text-2xl font-bold mb-4 neon-text-primary"></h2>
             <div class="space-y-4">
-                <input type="date" id="form-date" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none">
-                <input type="number" id="form-amount" placeholder="จำนวนเงิน" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none">
-                <input type="text" id="form-notes" placeholder="หมายเหตุ (ถ้ามี)" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none">
+                <input type="date" id="form-date" class="w-full p-3 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none">
+                <input type="number" id="form-amount" placeholder="จำนวนเงิน" class="w-full p-3 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none">
+                <input type="text" id="form-notes" placeholder="หมายเหตุ (ถ้ามี)" class="w-full p-3 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none">
                 <div class="flex gap-4 pt-4">
-                    <button onclick="closeModal()" class="flex-1 py-3 bg-gray-100 rounded-lg">ยกเลิก</button>
-                    <button id="save-btn" class="flex-1 py-3 bg-blue-600 text-white rounded-lg">บันทึก</button>
+                    <button onclick="closeModal('loan-modal')" class="flex-1 py-3 rounded-lg btn-secondary">ยกเลิก</button>
+                    <button id="save-loan-btn" class="flex-1 py-3 rounded-lg btn-primary">บันทึก</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden flex items-center justify-center p-4 z-50">
+        <div class="card p-8 max-w-md w-full rounded-2xl relative">
+            <button onclick="closeModal('settings-modal')" class="absolute top-4 right-4 text-gray-500 hover:text-cyan-400">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <h2 class="text-2xl font-bold mb-4 neon-text-primary">ตั้งค่าระบบ</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="setting-borrower-name" class="block text-sm font-medium mb-1 text-gray-400 light:text-gray-700">ชื่อผู้กู้:</label>
+                    <input type="text" id="setting-borrower-name" class="w-full p-3 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none">
+                </div>
+                <div>
+                    <label for="setting-interest-rate" class="block text-sm font-medium mb-1 text-gray-400 light:text-gray-700">อัตราดอกเบี้ย (% ต่อเดือน):</label>
+                    <input type="number" id="setting-interest-rate" class="w-full p-3 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none">
+                </div>
+                <div>
+                    <label for="setting-start-date" class="block text-sm font-medium mb-1 text-gray-400 light:text-gray-700">วันที่เริ่มนับดอกเบี้ย:</label>
+                    <input type="date" id="setting-start-date" class="w-full p-3 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none">
+                </div>
+                <div class="flex gap-4 pt-4">
+                    <button onclick="saveSettings()" class="flex-1 py-3 rounded-lg btn-primary">บันทึกการตั้งค่า</button>
+                </div>
+                <hr class="border-gray-700 light:border-gray-200">
+                <button onclick="exportData()" class="w-full py-3 rounded-lg btn-secondary hover:bg-gray-700 transition">💾 Export ข้อมูลเป็น CSV</button>
+                <button onclick="confirmReset()" class="w-full py-3 rounded-lg bg-red-600 text-white hover:bg-red-700 transition">⚠️ Reset ข้อมูลทั้งหมด</button>
             </div>
         </div>
     </div>
