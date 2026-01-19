@@ -182,11 +182,26 @@ function setupEventListeners() {
     });
 }
 
-function openModal(id) {
-    document.getElementById(id).classList.remove('hidden');
-    if (id === 'loan-modal') {
+function openModal(id, event) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    
+    modal.classList.remove('hidden');
+    
+    if (id === 'loan-modal' && event) {
         document.getElementById('form-date').valueAsDate = new Date();
-        document.getElementById('modal-loan-title').innerText = event.target.innerText;
+        // ดึงข้อความจากปุ่มที่กด (เช่น "เพิ่มยอดกู้" หรือ "ลดยอดกู้")
+        const buttonText = event.target.innerText;
+        document.getElementById('modal-loan-title').innerText = buttonText;
+        
+        const saveBtn = document.getElementById('save-loan-btn');
+        
+        // กำหนดการทำงานของปุ่มบันทึกใหม่ทุกครั้งที่เปิด Modal
+        if (buttonText.includes('เพิ่ม')) {
+            saveBtn.onclick = () => saveTransaction('เพิ่ม');
+        } else {
+            saveBtn.onclick = () => saveTransaction('ลด');
+        }
     }
 }
 
