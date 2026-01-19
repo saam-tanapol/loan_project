@@ -7,6 +7,7 @@ const cors = require('cors'); // เพิ่ม CORS เพื่อให้ f
 
 // Use body-parser middleware for parsing request bodies
 app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(cors()); // Enable CORS
 
 // Determine database path for Render or local environment
@@ -60,8 +61,9 @@ app.get('/api/loans', (req, res) => {
 // API: Add a new loan transaction
 app.post('/api/loans', (req, res) => {
     const { date, type, amount, balance, principal_balance, interest_accrued, notes, interest_rate } = req.body;
-    const sql = `INSERT INTO loans (date, type, amount, balance, principal_balance, interest_accrued, notes, interest_rate) VALUES (?,?,?,?,?,?,?,?)`;
-    db.run(sql, [date, type, amount, balance, principal_balance, interest_accrued || 0, notes, interest_rate || 0], function(err) {
+    const sql = `INSERT INTO loans (date, type, amount, balance, principal_balance, interest_accrued, notes, interest_rate) 
+                 VALUES (?,?,?,?,?,?,?,?)`;
+    db.run(sql, [date, type, amount, balance, principal_balance, interest_accrued, notes, interest_rate], function(err) {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ id: this.lastID });
     });
